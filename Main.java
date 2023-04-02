@@ -54,13 +54,11 @@ public class Main {
             System.out.println(hexPair);
         }
 
-
       
         System.out.println("First bytes: " + Arrays.toString(firstBytes));
        // System.out.println("Second bytes: " + Arrays.toString(secondBytes));
     
     }
-
 
 
 
