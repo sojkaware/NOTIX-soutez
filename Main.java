@@ -16,10 +16,10 @@ public class Main {
     
     public static void main(String[] args) throws Exception {
         // Download and unpack the file
-        downloadMessage2txt();
-      
-        String message = loadTxtMessage();
-        System.out.println("Decoded message: " + message);
+        //downloadMessage2txt();
+      //
+        //String message = loadTxtMessage();
+        //System.out.println("Decoded message: " + message);
         //System.out.println(new String(decrypted));
         
         // Encrypt and decrypt the message
@@ -28,8 +28,9 @@ public class Main {
         //byte[] decrypted = decrypt(encrypted, KEY);
         //System.out.println(new String(decrypted));
         String input = "0x7d0xe9|0x7e0xfdxxxx0xb60x840x9d0xc80xa50xc4";
+
         String[] pairs = input.split("\\|");
-        
+
         int stopIndex = 0;
         for (int i = 0; i < pairs.length; i++) {
             if (pairs[i].contains("xxxx")) {
