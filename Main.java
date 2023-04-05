@@ -1,71 +1,105 @@
-import java.io.*;
+//import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.Key;
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
+
 import java.util.zip.ZipInputStream;
-import java.util.ArrayList;
-import java.util.List;
+
+import java.util.Map;
 import java.util.Arrays;
-//
-//
+
+
+import java.util.HashMap;
+import java.lang.Integer;
+
 public class Main {
-    private static final String ALGORITHM = "AES";
-    private static final String KEY = "mysecretpassword";
-    
+
     public static void main(String[] args) throws Exception {
         // Download and unpack the file
-        //downloadMessage2txt();
-      ////
+        downloadMessage2txt(); // 
 
-      //asdsadfc
-
-
-        //String message = loadTxtMessage();
-        //System.out.println("Decoded message: " + message);
-        //System.out.println(new String(decrypted));
-        
-        // Encrypt and decrypt the message
-        //String message = "Hello world";
-        //byte[] encrypted = encrypt(message.getBytes(), KEY);
-        //byte[] decrypted = decrypt(encrypted, KEY);
-        //System.out.println(new String(decrypted));
-        String input = "0x7d0xe9|0x7e0xfdxxxx0xb60x840x9d0xc80xa50xc4";
-
-        String[] pairs = input.split("\\|");
-
-        int stopIndex = 0;
-        for (int i = 0; i < pairs.length; i++) {
-            if (pairs[i].contains("xxxx")) {
-                stopIndex = i;
-                break;
-            }
-        }
-
-        byte[][] firstBytes = new byte[stopIndex][2];
-        for (int i = 0; i < stopIndex; i++) {
-            String[] hexValues = pairs[i].split("0x");
-            for (int j = 1; j < hexValues.length; j++) {
-                String hexValue = hexValues[j];
-                byte b = (byte) Integer.parseInt(hexValue, 16);
-                firstBytes[i][j-1] = b;
-            }
-        }
-
-        for (int i = 0; i < stopIndex; i++) {
-            String hexPair = String.format("%02X %02X", firstBytes[i][0], firstBytes[i][1]);
-            System.out.println(hexPair);
-        }
-
-      
-        System.out.println("First bytes: " + Arrays.toString(firstBytes));
-       // System.out.println("Second bytes: " + Arrays.toString(secondBytes));
+        String inputStr = loadTxtMessage();
     
+        System.out.println("\n" + inputStr);
+
+        String[] parts_inputStr = inputStr.split("xxxx");
+        String[] firstPairsHexaStr = parts_inputStr[0].split("\\|");
+        String[] afterxxxxHexa_splittedDigits = parts_inputStr[1].split("0x");
+    
+        int[] firstBytes_left = new int[firstPairsHexaStr.length];
+        int[] firstBytes_right = new int[firstPairsHexaStr.length];
+
+        for (int j = 0; j < firstPairsHexaStr.length; j++) {
+            String firstHexPairStr = firstPairsHexaStr[j];
+            String[] firstHexPairStr_splittedDigits = firstHexPairStr.split("0x");
+            firstBytes_left[j] = (int) Integer.parseInt(firstHexPairStr_splittedDigits[1], 16);
+            firstBytes_right[j] = (int) Integer.parseInt(firstHexPairStr_splittedDigits[2], 16);
+            // System.out.println( firstBytes_left[j] ); 
+            // System.out.println( firstBytes_right[j] ); 
+        }
+       
+       //////////////////////////INVESTIGATION////////////////////////////
+
+        int[] unique_min_max__left = arr_unique_min_max(firstBytes_left);
+        int[] unique_min_max__right = arr_unique_min_max(firstBytes_right);
+        if (unique_min_max__left[0] == firstBytes_left.length && unique_min_max__right[0] == firstBytes_right.length) {
+            System.out.println("\n"); 
+            System.out.println("Not a single byte in the left column is present twice.");
+            System.out.println("Not a single byte in the right column is present twice.");
+            System.out.println("It seems that the pairs of the bytes form a bijective mapping.");
+       }     
+       System.out.println("\n"); 
+       System.out.println("Min-Max for the left bytes is: " + unique_min_max__left[1] + " - " + unique_min_max__left[2]);
+       System.out.println("Min-Max for the right bytes is: " + unique_min_max__right[1] + " - " + unique_min_max__right[2]);
+
+
+       int[] secondBytes = new int[afterxxxxHexa_splittedDigits.length-1];
+       for (int j = 1; j < afterxxxxHexa_splittedDigits.length; j++) {
+            String twoHexDigitsStr = afterxxxxHexa_splittedDigits[j];
+            secondBytes[j-1] = Integer.parseInt(twoHexDigitsStr, 16);
+        }
+
+        int[] unique_min_max__secondBytes = arr_unique_min_max(secondBytes);
+        System.out.println("Min-Max for the bytes in the payload is: " + unique_min_max__secondBytes[1] + " - " + unique_min_max__secondBytes[2]);
+
+       System.out.println("\n"); 
+       System.out.println("Seems that the bytes in the payload section of the message are part of the firstBytes_right column.");
+       System.out.println("This suggests I should use this mapping by replacing the bytes by corresponding bytes in the firstBytes_left and convert it to ASCII");
+       
+        //////////////////////////SOLVING THE PUZZLE////////////////////////////
+        
+        Map<Integer, Integer> asciiMap = new HashMap<>();
+        for (int i = 0; i < firstBytes_left.length; i++) {
+            asciiMap.put( firstBytes_right[i] , firstBytes_left[i]);
+        }
+
+        String output = "";
+        for (int i = 0; i < secondBytes.length; i++) {
+            int translated_value = asciiMap.get(secondBytes[i]);
+            char c = (char) translated_value;
+            output += c;
+        }
+        System.out.println("\n");
+        System.out.println(output);
     }
 
+        ////////////////////////////////////////////////////////////////////////
 
+
+    public static int[] arr_unique_min_max(int[] arr) {
+        int[] arr_sorted = Arrays.copyOf(arr, arr.length);
+        Arrays.sort(arr_sorted);
+        int numUniqueElements = 0;
+        for (int i = 0; i < arr_sorted.length - 1; i++) {
+            if (arr_sorted[i] != arr_sorted[i+1]) {
+                numUniqueElements++;
+            }
+        }
+        // Add 1 for the last element
+        numUniqueElements++;
+        int[] arrstats = { numUniqueElements , arr_sorted[0] , arr_sorted[arr_sorted.length-1] };
+        return arrstats;
+    }
 
     public static void downloadMessage2txt() throws Exception {
 
@@ -83,38 +117,13 @@ public class Main {
           return message;
     }
 
-    public static String stringExtractBytes(String data) {
-            String[] byteStrings = data.split("\\|");
-            byte[] bytes = new byte[byteStrings.length];
-            for (int i = 0; i < byteStrings.length; i++) {
-                bytes[i] = (byte) Integer.parseInt(byteStrings[i].substring(2), 16);
-            }
-            String byteString = new String(bytes);
-            return byteString;
-    }
-
-
-
-    
-
-
-
-
-
-
-  
-    
-    private static byte[] encrypt(byte[] data, String key) throws Exception {
-        Key secretKey = new SecretKeySpec(key.getBytes(), ALGORITHM);
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-        return cipher.doFinal(data);
-    }
-    
-    private static byte[] decrypt(byte[] data, String key) throws Exception {
-        Key secretKey = new SecretKeySpec(key.getBytes(), ALGORITHM);
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, secretKey);
-        return cipher.doFinal(data);
-    }
 }
+
+
+    
+
+
+
+
+
+
